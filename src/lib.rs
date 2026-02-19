@@ -58,9 +58,57 @@ fn decode_qr_bytes(
     }
 }
 
+#[pyfunction]
+fn decode_qrs(file_path: &str, try_harder: Option<bool>) -> PyResult<Vec<String>> {
+    let mut hints = DecodingHintDictionary::new();
+    if try_harder.unwrap_or(true) {
+        hints.insert(
+            DecodeHintType::TRY_HARDER,
+            rxing::DecodeHintValue::TryHarder(true),
+        );
+    }
+
+    let res = rxing::helpers::detect_multiple_in_file_with_hints(file_path, &mut hints);
+
+    match res {
+        Ok(codes) => Ok(codes.into_iter().map(|c| c.getText().to_string()).collect()),
+        Err(Exceptions::NotFoundException(_)) => Ok(vec![]),
+        Err(e) => Err(PyRuntimeError::new_err(format!("QR decode error: {e:?}"))),
+    }
+}
+
+#[pyfunction]
+fn decode_qrs_bytes(
+    file_bytes: &[u8],
+    width: u32,
+    height: u32,
+    try_harder: Option<bool>,
+) -> PyResult<Vec<String>> {
+    let mut hints = DecodingHintDictionary::new();
+    if try_harder.unwrap_or(true) {
+        hints.insert(
+            DecodeHintType::TRY_HARDER,
+            rxing::DecodeHintValue::TryHarder(true),
+        );
+    }
+
+    let file_bytes = file_bytes.to_vec();
+
+    let res =
+        rxing::helpers::detect_multiple_in_luma_with_hints(file_bytes, width, height, &mut hints);
+
+    match res {
+        Ok(codes) => Ok(codes.into_iter().map(|c| c.getText().to_string()).collect()),
+        Err(Exceptions::NotFoundException(_)) => Ok(vec![]),
+        Err(e) => Err(PyRuntimeError::new_err(format!("QR decode error: {e:?}"))),
+    }
+}
+
 #[pymodule]
 fn qrfast(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decode_qr, m)?)?;
     m.add_function(wrap_pyfunction!(decode_qr_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(decode_qrs, m)?)?;
+    m.add_function(wrap_pyfunction!(decode_qrs_bytes, m)?)?;
     Ok(())
 }
