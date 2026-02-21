@@ -34,3 +34,8 @@ Repository = "https://github.com/jsaied99/qrfast"
 Issues = "https://github.com/jsaied99/qrfast/issues"
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+[dependency-groups]
+dev = [
+    "maturin>=1.12.2",
+]
